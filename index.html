@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>English Language Test — Grade-wise (International & Indian)</title>
+<style>
+  :root{
+    --bg:#0f1720; --panel:#16212c; --panel2:#1d2a37; --ink:#eaf2f8; --muted:#9fb3c4;
+    --accent:#ffb020; --accent2:#2fb98a; --bad:#e2574c; --line:#2a3947; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 20% -10%, #1b2b3a, var(--bg));
+    color:var(--ink);font-family:Georgia,"Times New Roman",serif;line-height:1.5}
+  .wrap{max-width:900px;margin:0 auto;padding:28px 18px 70px}
+  header h1{font-size:clamp(26px,4vw,40px);margin:0 0 6px;letter-spacing:.5px}
+  header p{color:var(--muted);margin:0 0 24px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:18px}
+  h2{font-size:20px;margin:0 0 12px}
+  label{display:block;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  select,input{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--ink);font-family:inherit;font-size:16px}
+  .row{display:flex;gap:14px;flex-wrap:wrap}
+  .row>div{flex:1 1 220px}
+  .versions{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
+  .ver{flex:1 1 240px;cursor:pointer;background:var(--panel2);border:1px solid var(--line);
+    border-radius:12px;padding:14px}
+  .ver.sel{border-color:var(--accent);box-shadow:0 0 0 2px rgba(255,176,32,.2)}
+  .ver b{display:block;margin-bottom:4px}
+  .ver span{color:var(--muted);font-size:14px}
+  button{font-family:inherit;font-size:16px;padding:12px 22px;border-radius:10px;border:0;cursor:pointer;
+    background:var(--accent);color:#2a1c00;font-weight:bold}
+  button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:normal}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .q{border-top:1px solid var(--line);padding:16px 0}
+  .q:first-child{border-top:0}
+  .qtext{margin:0 0 10px;font-size:17px}
+  .qnum{color:var(--accent);font-weight:bold;margin-right:8px}
+  .opt{display:block;padding:9px 12px;border:1px solid var(--line);border-radius:9px;margin:6px 0;cursor:pointer;background:var(--panel2)}
+  .opt:hover{border-color:var(--accent)}
+  .opt input{width:auto;margin-right:9px}
+  .opt.correct{border-color:var(--accent2);background:rgba(47,185,138,.12)}
+  .opt.wrong{border-color:var(--bad);background:rgba(226,87,76,.12)}
+  .score{font-size:46px;margin:6px 0}
+  .bar{height:12px;border-radius:99px;background:var(--panel2);overflow:hidden;margin:12px 0}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .tag{display:inline-block;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+    border:1px solid var(--line);border-radius:99px;padding:4px 10px;margin-right:6px}
+  .hide{display:none}
+  .note{color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>English Language Test</h1>
+  <p>Pick your grade and a test version, answer the questions, and see your result instantly.</p>
+</header>
+
+<!-- SETUP -->
+<section id="setup" class="card">
+  <h2>Start a test</h2>
+  <div class="row">
+    <div>
+      <label for="name">Your name (optional)</label>
+      <input id="name" placeholder="e.g. Prateek" />
+    </div>
+    <div>
+      <label for="grade">Grade / Class</label>
+      <select id="grade"></select>
+    </div>
+  </div>
+  <label style="margin-top:18px">Test version</label>
+  <div class="versions">
+    <div class="ver sel" data-ver="intl"><b>International English</b><span>General school English — grammar, vocabulary, reading.</span></div>
+    <div class="ver" data-ver="india"><b>Indian Version (CBSE / NCERT style)</b><span>Indian school English — grammar, Indian context, comprehension.</span></div>
+  </div>
+  <p style="margin-top:20px"><button id="start">Begin test</button></p>
+  <p class="note" id="setupNote"></p>
+</section>
+
+<!-- TEST -->
+<section id="test" class="card hide">
+  <div id="testHead"></div>
+  <div id="questions"></div>
+  <p style="margin-top:18px">
+    <button id="submit">Submit answers</button>
+    <button class="ghost" id="cancel">Cancel</button>
+  </p>
+  <p class="note" id="progress"></p>
+</section>
+
+<!-- RESULT -->
+<section id="result" class="card hide">
+  <h2>Result</h2>
+  <div id="resultBody"></div>
+  <p style="margin-top:18px">
+    <button id="again">Take another test</button>
+    <button class="ghost" id="review">Show answer review</button>
+  </p>
+</section>
+
+<section id="reviewBox" class="card hide">
+  <h2>Answer review</h2>
+  <div id="reviewBody"></div>
+</section>
+
+</div>
+<script>
+/* ---------- Question bank ----------
+   Q format: [question, [options], correctIndex]
+   BANK[version][grade] = array of questions
+------------------------------------ */
+const BANK = { intl:{}, india:{} };
+
+// ---- INTERNATIONAL ----
+BANK.intl[1] = [
+ ["Which word names an animal?",["Table","Cat","Blue","Run"],1],
+ ["Choose the correct one: I ___ a boy.",["am","is","are","be"],0],
+ ["Which letter comes after 'M'?",["L","N","O","P"],1],
+ ["Pick the rhyming word for 'sun'.",["fun","sit","top","bag"],0],
+ ["What is the plural of 'dog'?",["dogs","doges","dog's","dogies"],0],
+ ["Which word starts with a capital letter always?",["apple","ram","London","chair"],2],
+ ["Choose the opposite of 'big'.",["tall","small","wide","long"],1],
+ ["Which is a colour?",["Green","Chair","Jump","Milk"],0]
+];
+BANK.intl[2] = [
+ ["She ___ to school every day.",["go","goes","going","gone"],1],
+ ["Plural of 'baby':",["babys","babies","babyes","baby"],1],
+ ["Which word is a verb?",["quickly","swim","happy","door"],1],
+ ["Opposite of 'early':",["late","soon","fast","first"],0],
+ ["Choose the correct punctuation: Where is my bag",["bag.","bag?","bag!","bag,"],1],
+ ["A group of sheep is called a ___.",["flock","pack","fleet","bunch"],0],
+ ["Past tense of 'eat':",["eated","ate","eaten","eating"],1],
+ ["Which is a proper noun?",["city","Paris","river","teacher"],1]
+];
+BANK.intl[3] = [
+ ["Choose the adjective: The tall boy ran fast.",["boy","tall","ran","fast"],1],
+ ["They ___ playing in the garden now.",["is","am","are","be"],2],
+ ["Synonym of 'happy':",["angry","glad","tired","sad"],1],
+ ["Which sentence is correct?",["He don't like tea.","He doesn't likes tea.","He doesn't like tea.","He not like tea."],2],
+ ["The opposite of 'ancient' is:",["old","modern","huge","quiet"],1],
+ ["Past tense of 'bring':",["bringed","brang","brought","brung"],2],
+ ["Pick the correct spelling:",["freind","friend","frend","friendd"],1],
+ ["'A pair of scissors ___ on the table.'",["is","are","were","have"],0]
+];
+BANK.intl[4] = [
+ ["Choose the adverb: She sang beautifully.",["She","sang","beautifully","—"],2],
+ ["Fill in: If it rains, we ___ stay home.",["will","would","was","are"],0],
+ ["Antonym of 'generous':",["kind","selfish","rich","brave"],1],
+ ["Which is a compound word?",["running","notebook","quickly","teacher"],1],
+ ["Correct comparative of 'good':",["gooder","more good","better","best"],2],
+ ["Identify the preposition: The cat sat under the chair.",["cat","sat","under","chair"],2],
+ ["Meaning of the idiom 'piece of cake':",["Very tasty","Very easy","Very costly","Very small"],1],
+ ["Pick the correct sentence:",["Neither of them are here.","Neither of them is here.","Neither of them were here.","Neither of them be here."],1]
+];
+BANK.intl[5] = [
+ ["Choose the correct tense: By 6 pm, he ___ his homework.",["finish","finished","had finished","finishing"],2],
+ ["Synonym of 'brave':",["timid","courageous","lazy","noisy"],1],
+ ["Which sentence uses the passive voice?",["She wrote a letter.","A letter was written by her.","She is writing.","Write a letter."],1],
+ ["A word that means 'lasting a short time':",["temporary","permanent","eternal","constant"],0],
+ ["Pick the correctly punctuated sentence:",["\"Come here,\" she said.","\"Come here\" she said.","Come here, \"she said\".","\"Come here she said.\""],0],
+ ["Plural of 'mouse' (animal):",["mouses","mice","mices","mouse"],1],
+ ["Identify the conjunction: I stayed home because it rained.",["stayed","home","because","rained"],2],
+ ["Opposite of 'expand':",["grow","shrink","stretch","widen"],1]
+];
+BANK.intl[6] = [
+ ["Reported speech: He said, \"I am tired.\" →",["He said he is tired.","He said he was tired.","He says he was tired.","He said I was tired."],1],
+ ["Choose the correct article: She is ___ honest girl.",["a","an","the","no article"],1],
+ ["Meaning of 'reluctant':",["eager","unwilling","cheerful","clever"],1],
+ ["Which is a complex sentence?",["I ran and jumped.","Although it rained, we played.","He is tall.","Run fast!"],1],
+ ["Antonym of 'scarce':",["rare","plentiful","little","thin"],1],
+ ["Correct form: Each of the students ___ a book.",["have","has","having","are"],1],
+ ["The word 'unbelievable' has the prefix:",["un-","be-","-able","believe"],0],
+ ["Idiom 'to let the cat out of the bag' means:",["To free a pet","To reveal a secret","To make noise","To lose something"],1]
+];
+BANK.intl[7] = [
+ ["Choose the correct: Hardly had he left ___ it started raining.",["than","when","then","that"],1],
+ ["Synonym of 'meticulous':",["careless","very careful","fast","rude"],1],
+ ["Identify the clause type: 'that she bought yesterday'",["Main clause","Relative clause","Adverb clause of time","Noun phrase"],1],
+ ["Passive of 'They will complete the work.'",["The work will complete.","The work will be completed.","The work is completed.","The work was completed."],1],
+ ["Antonym of 'obscure':",["vague","clear","dark","hidden"],1],
+ ["Pick the correct spelling:",["accomodate","accommodate","acommodate","accomodatte"],1],
+ ["'Neither the teacher nor the students ___ present.'",["was","were","is","has"],1],
+ ["A metaphor is:",["A direct comparison without 'like' or 'as'","A comparison using 'like'","A sound word","An exaggeration"],0]
+];
+BANK.intl[8] = [
+ ["Choose the correct conditional: If I ___ rich, I would travel.",["am","was","were","will be"],2],
+ ["Meaning of 'ambiguous':",["Clear","Open to more than one meaning","Loud","Ancient"],1],
+ ["Identify the figure of speech: 'The wind whispered.'",["Simile","Personification","Hyperbole","Irony"],1],
+ ["Correct: She is senior ___ me.",["than","to","from","of"],1],
+ ["Antonym of 'benevolent':",["kind","cruel","generous","gentle"],1],
+ ["Change to indirect: She said, \"Do not shout.\"",["She told not to shout.","She asked me not to shout.","She said don't shout.","She says not shout."],1],
+ ["A gerund is a verb form ending in -ing used as a:",["Verb","Noun","Adjective","Adverb"],1],
+ ["Pick the correct sentence:",["He is one of the boys who is late.","He is one of the boys who are late.","He is one of the boy who are late.","He are one of the boys who is late."],1]
+];
+BANK.intl[9] = [
+ ["Meaning of 'pragmatic':",["Idealistic","Practical","Emotional","Careless"],1],
+ ["Identify the error: 'The team are playing well in their first match.'",["No error","'are' should be 'is' in American usage","'well' is wrong","'their' is wrong"],1],
+ ["'In spite of' is followed by:",["a clause","a noun or gerund","an infinitive","an adjective"],1],
+ ["Choose the best synonym for 'candid':",["Dishonest","Frank","Shy","Rude"],1],
+ ["Which is an oxymoron?",["Deafening silence","Bright sun","Cold ice","Fast runner"],0],
+ ["Correct: No sooner had he arrived ___ the bell rang.",["when","than","then","that"],1],
+ ["The tone of a satirical piece is usually:",["Mocking and critical","Purely factual","Sorrowful","Romantic"],0],
+ ["Passive: 'Someone has stolen my bag.'",["My bag has stolen.","My bag has been stolen.","My bag was stealing.","My bag is stolen by someone."],1]
+];
+BANK.intl[10] = [
+ ["Meaning of 'ubiquitous':",["Rare","Present everywhere","Unclear","Expensive"],1],
+ ["Identify the literary device: 'I have told you a million times.'",["Hyperbole","Metaphor","Alliteration","Onomatopoeia"],0],
+ ["Choose the correct: Scarcely had the film begun ___ the power failed.",["than","when","then","that"],1],
+ ["Synonym of 'tenacious':",["Weak","Persistent","Lazy","Fragile"],1],
+ ["'Had I known, I would have helped' is an example of:",["Third conditional","First conditional","Zero conditional","Imperative"],0],
+ ["Antonym of 'lucid':",["Clear","Confusing","Bright","Simple"],1],
+ ["Which sentence is grammatically correct?",["Each of the answers are right.","Every one of the answers is right.","Either of the answers are right.","None of these."],1],
+ ["A soliloquy is:",["A dialogue between two characters","A speech a character makes alone, revealing thoughts","A poem of 14 lines","A stage direction"],1]
+];
+
+// ---- INDIAN VERSION (CBSE / NCERT style) ----
+BANK.india[1] = [
+ ["Fill in: The national bird of India is the ___.",["peacock","parrot","crow","sparrow"],0],
+ ["Choose the correct: This ___ my school.",["is","are","am","be"],0],
+ ["Which word is a naming word (noun)?",["Diwali","pretty","jump","slowly"],0],
+ ["Plural of 'mango':",["mangos","mangoes","mangoe","mango"],1],
+ ["Opposite of 'hot' (as in weather):",["cold","warm","sunny","dry"],0],
+ ["Rhyming word for 'ram':",["jam","rice","dog","book"],0],
+ ["We say 'Namaste' to ___ someone.",["greet","eat","run","sleep"],0],
+ ["Which one is a fruit grown in India?",["Guava","Chair","Pencil","Shoe"],0]
+];
+BANK.india[2] = [
+ ["Rani ___ rangoli every Diwali.",["make","makes","making","made"],1],
+ ["Plural of 'roti':",["rotis","roties","roti","rotee"],0],
+ ["Choose the action word: Ravi flies a kite on Makar Sankranti.",["Ravi","flies","kite","on"],1],
+ ["Opposite of 'clean':",["dirty","neat","tidy","fresh"],0],
+ ["Which is a proper noun?",["river","Ganga","boy","school"],1],
+ ["Correct punctuation: What a beautiful temple",["temple.","temple!","temple?","temple,"],1],
+ ["Past tense of 'go':",["goed","went","gone","going"],1],
+ ["A place where we buy vegetables is a ___.",["market","hospital","library","bank"],0]
+];
+BANK.india[3] = [
+ ["Fill in the article: ___ Taj Mahal is in Agra.",["A","An","The","No article"],2],
+ ["Choose the adjective: The sweet jalebi was hot.",["jalebi","sweet","was","the"],1],
+ ["Synonym of 'big':",["tiny","huge","thin","late"],1],
+ ["Correct sentence:",["He do not like curd.","He does not likes curd.","He does not like curd.","He not like curd."],2],
+ ["Past tense of 'teach':",["teached","taught","teached","teaching"],1],
+ ["Which festival word is spelt correctly?",["Dussehra","Dushehra","Dusherra","Dussehraa"],0],
+ ["A collection of stars is called a ___.",["herd","constellation","flock","bunch"],1],
+ ["'They ___ going to Kerala tomorrow.'",["is","am","are","was"],2]
+];
+BANK.india[4] = [
+ ["Identify the adverb: Meera sings sweetly at the school function.",["Meera","sings","sweetly","school"],2],
+ ["Choose the preposition: The book is on the desk.",["book","is","on","desk"],2],
+ ["Antonym of 'victory':",["success","defeat","win","joy"],1],
+ ["Fill in: If it rains, the match ___ be cancelled.",["will","would","was","is"],0],
+ ["Meaning of the idiom 'a bolt from the blue':",["A sudden shock","A blue light","A storm","A friend"],0],
+ ["Correct comparative of 'bad':",["badder","worse","worst","more bad"],1],
+ ["Which is a compound word?",["sunlight","running","slowly","happy"],0],
+ ["Choose the correct sentence:",["Neither of the boys are ready.","Neither of the boys is ready.","Neither of the boys were ready.","Neither boys is ready."],1]
+];
+BANK.india[5] = [
+ ["Change into plural: 'This is a mango tree.'",["These are mango trees.","These is mango trees.","This are mango tree.","These are mango tree."],0],
+ ["Synonym of 'courage':",["fear","bravery","anger","doubt"],1],
+ ["Fill in: Gandhiji ___ born in Porbandar.",["is","was","were","has"],1],
+ ["Identify the conjunction: I stayed at home because it was raining.",["stayed","home","because","raining"],2],
+ ["Correct punctuation of direct speech:",["\"Let us go,\" said Asha.","\"Let us go\" said Asha.","Let us go, \"said Asha\".","\"Let us go said Asha.\""],0],
+ ["Opposite of 'ancient':",["old","modern","huge","holy"],1],
+ ["Plural of 'child':",["childs","children","childrens","childes"],1],
+ ["The word 'carefully' is a/an:",["noun","adjective","adverb","verb"],2]
+];
+BANK.india[6] = [
+ ["Reported speech: Ravi said, \"I am reading the Ramayana.\" →",["Ravi said he is reading the Ramayana.","Ravi said he was reading the Ramayana.","Ravi says he was reading.","Ravi said I was reading."],1],
+ ["Choose the correct article: He is ___ university student.",["a","an","the","no article"],0],
+ ["Meaning of 'diligent':",["lazy","hard-working","angry","shy"],1],
+ ["Fill in with the correct verb: Each of the girls ___ a uniform.",["have","has","having","are"],1],
+ ["Antonym of 'scarce':",["rare","plentiful","few","small"],1],
+ ["Idiom 'to burn the midnight oil' means:",["To waste money","To study or work late at night","To light a lamp","To cook late"],1],
+ ["Identify the tense: 'She has finished her homework.'",["Simple past","Present perfect","Past perfect","Future"],1],
+ ["Which sentence is in the passive voice?",["Amma cooked the food.","The food was cooked by Amma.","Amma is cooking.","Cook the food."],1]
+];
+BANK.india[7] = [
+ ["Fill in: Hardly had the train left ___ the announcement came.",["than","when","then","that"],1],
+ ["Synonym of 'obedient':",["stubborn","dutiful","rude","clever"],1],
+ ["Change into passive: 'The students will plant trees.'",["Trees will plant by students.","Trees will be planted by the students.","Trees are planted.","Trees were planted."],1],
+ ["Identify the relative clause: 'The boy who won the race is my cousin.'",["The boy","who won the race","is my cousin","my cousin"],1],
+ ["Antonym of 'humble':",["modest","arrogant","simple","poor"],1],
+ ["Correct spelling:",["neccessary","necesary","necessary","necessery"],2],
+ ["'Neither the captain nor the players ___ happy.'",["was","were","is","has"],1],
+ ["A letter to the Principal asking for leave is a:",["Informal letter","Formal letter","Notice","Diary entry"],1]
+];
+BANK.india[8] = [
+ ["Fill in: If I ___ you, I would apologise.",["am","was","were","will be"],2],
+ ["Meaning of 'perseverance':",["Giving up","Continued effort","Laziness","Anger"],1],
+ ["Figure of speech in 'The trees danced in the breeze':",["Simile","Personification","Hyperbole","Metaphor"],1],
+ ["Correct: She is junior ___ me.",["than","to","from","of"],1],
+ ["Indirect speech: The teacher said, \"Do not make noise.\"",["The teacher said not make noise.","The teacher asked us not to make noise.","The teacher told don't make noise.","The teacher says no noise."],1],
+ ["Antonym of 'benevolent':",["kind","malevolent","gentle","noble"],1],
+ ["Which is correct?",["He is one of the students who is bright.","He is one of the students who are bright.","He is one of student who are bright.","He are one of the students."],1],
+ ["A formal notice in CBSE format must always include:",["Heading, date, body, name & designation","Only the message","A greeting and closing","An address"],0]
+];
+BANK.india[9] = [
+ ["Meaning of 'pragmatic':",["Idealistic","Practical","Emotional","Careless"],1],
+ ["Fill in with a modal: You ___ wear a helmet while riding.",["can","must","may","might"],1],
+ ["Gap filling: He has been living in Delhi ___ 2015.",["for","since","from","by"],1],
+ ["Editing: 'She don't know the answer.' The correct word is:",["doesn't","didn't","not","isn't"],0],
+ ["Passive: 'Someone has stolen my cycle.'",["My cycle has stolen.","My cycle has been stolen.","My cycle was stealing.","My cycle is stolen."],1],
+ ["In 'The Road Not Taken', the two roads symbolise:",["Two forests","Choices in life","Two villages","A journey by car"],1],
+ ["Synonym of 'candid':",["dishonest","frank","shy","rude"],1],
+ ["An article for the school magazine should be written in:",["Formal, structured language with a title","SMS language","Dialogue form","Bullet points only"],0]
+];
+BANK.india[10] = [
+ ["Meaning of 'ubiquitous':",["Rare","Present everywhere","Unclear","Costly"],1],
+ ["Reported speech: She said, \"I have completed my project.\" →",["She said she has completed her project.","She said she had completed her project.","She says she completed project.","She said I had completed."],1],
+ ["Gap filling: If he had studied, he ___ passed.",["will have","would have","would","had"],1],
+ ["Figure of speech: 'I have told you a thousand times.'",["Hyperbole","Simile","Irony","Metaphor"],0],
+ ["Editing: 'Neither of the answers are correct.' Correct 'are' to:",["is","were","be","have"],0],
+ ["In 'Nelson Mandela: Long Walk to Freedom', Mandela speaks of:",["A cricket match","Freedom and the cost of apartheid","A village school","A sea voyage"],1],
+ ["Subject-verb agreement: 'The news ___ shocking.'",["are","is","were","have"],1],
+ ["A CBSE analytical paragraph should be based on:",["Personal opinion only","The given chart, map or data","A story","A poem"],1]
+];
+
+/* ---------- App logic ---------- */
+const GRADES = [1,2,3,4,5,6,7,8,9,10];
+const VER_NAME = { intl:"International English", india:"Indian Version (CBSE / NCERT style)" };
+let version = "intl", current = null, answers = [];
+
+const $ = id => document.getElementById(id);
+const gradeSel = $("grade");
+GRADES.forEach(g => {
+  const o = document.createElement("option");
+  o.value = g; o.textContent = "Grade / Class " + g;
+  gradeSel.appendChild(o);
+});
+gradeSel.value = 5;
+
+document.querySelectorAll(".ver").forEach(el => {
+  el.addEventListener("click", () => {
+    document.querySelectorAll(".ver").forEach(x => x.classList.remove("sel"));
+    el.classList.add("sel");
+    version = el.dataset.ver;
+  });
+});
+
+function shuffle(a){ a = a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+$("start").addEventListener("click", () => {
+  const grade = +gradeSel.value;
+  const qs = shuffle(BANK[version][grade] || []);
+  if(!qs.length){ $("setupNote").textContent = "No questions available for this selection."; return; }
+  current = { grade, version, qs };
+  answers = new Array(qs.length).fill(null);
+  renderTest();
+});
+
+function renderTest(){
+  $("setup").classList.add("hide");
+  $("result").classList.add("hide");
+  $("reviewBox").classList.add("hide");
+  $("test").classList.remove("hide");
+  const name = $("name").value.trim();
+  $("testHead").innerHTML =
+    '<span class="tag">Grade ' + current.grade + '</span>' +
+    '<span class="tag">' + VER_NAME[current.version] + '</span>' +
+    '<span class="tag">' + current.qs.length + ' questions</span>' +
+    '<h2 style="margin-top:12px">' + (name ? name + ", answer" : "Answer") + ' all the questions</h2>';
+
+  $("questions").innerHTML = current.qs.map((q,i) =>
+    '<div class="q"><p class="qtext"><span class="qnum">Q' + (i+1) + '.</span>' + q[0] + '</p>' +
+    q[1].map((opt,j) =>
+      '<label class="opt"><input type="radio" name="q' + i + '" value="' + j + '">' + opt + '</label>'
+    ).join("") + '</div>'
+  ).join("");
+
+  $("questions").onchange = syncAnswers;
+  $("questions").onclick = () => setTimeout(syncAnswers, 0);
+  syncAnswers();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function syncAnswers(){
+  answers = current.qs.map((q,i) => {
+    const c = document.querySelector('#questions input[name="q' + i + '"]:checked');
+    return c ? +c.value : null;
+  });
+  updateProgress();
+}
+function updateProgress(){
+  const done = answers.filter(a => a !== null).length;
+  $("progress").textContent = done + " of " + answers.length + " answered.";
+}
+
+$("cancel").addEventListener("click", () => {
+  $("test").classList.add("hide");
+  $("setup").classList.remove("hide");
+});
+
+$("submit").addEventListener("click", () => {
+  syncAnswers();
+  const left = answers.filter(a => a === null).length;
+  if(left > 0 && $("submit").dataset.warned !== "1"){
+    $("submit").dataset.warned = "1";
+    $("progress").textContent = left + " question(s) unanswered. Click Submit again to submit anyway.";
+    return;
+  }
+  $("submit").dataset.warned = "";
+  showResult();
+});
+
+function grade(pct){
+  if(pct >= 90) return ["A+","Outstanding — excellent command of English at this level."];
+  if(pct >= 75) return ["A","Very good — a few small gaps to polish."];
+  if(pct >= 60) return ["B","Good — revise grammar rules and vocabulary."];
+  if(pct >= 40) return ["C","Fair — practise regularly with easier exercises first."];
+  return ["D","Needs work — revisit the basics for this grade and try again."];
+}
+
+function showResult(){
+  const score = current.qs.reduce((s,q,i) => s + (answers[i] === q[2] ? 1 : 0), 0);
+  const total = current.qs.length;
+  const pct = Math.round(score/total*100);
+  const [g, msg] = grade(pct);
+  const name = $("name").value.trim();
+  $("test").classList.add("hide");
+  $("result").classList.remove("hide");
+  $("resultBody").innerHTML =
+    (name ? '<p class="note">' + name + '</p>' : '') +
+    '<span class="tag">Grade ' + current.grade + '</span><span class="tag">' + VER_NAME[current.version] + '</span>' +
+    '<p class="score">' + score + ' / ' + total + '</p>' +
+    '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+    '<p><b>' + pct + '%</b> &nbsp;·&nbsp; Band <b>' + g + '</b></p>' +
+    '<p class="note">' + msg + '</p>';
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+$("again").addEventListener("click", () => {
+  $("result").classList.add("hide");
+  $("reviewBox").classList.add("hide");
+  $("setup").classList.remove("hide");
+  window.scrollTo({top:0,behavior:"smooth"});
+});
+
+$("review").addEventListener("click", () => {
+  const box = $("reviewBox");
+  box.classList.toggle("hide");
+  if(box.classList.contains("hide")) return;
+  $("reviewBody").innerHTML = current.qs.map((q,i) => {
+    const mine = answers[i];
+    return '<div class="q"><p class="qtext"><span class="qnum">Q' + (i+1) + '.</span>' + q[0] + '</p>' +
+      q[1].map((opt,j) => {
+        let cls = "opt";
+        if(j === q[2]) cls += " correct";
+        else if(j === mine) cls += " wrong";
+        return '<div class="' + cls + '">' + opt +
+          (j === q[2] ? ' <b>(correct)</b>' : '') +
+          (j === mine && j !== q[2] ? ' <b>(your answer)</b>' : '') + '</div>';
+      }).join("") +
+      (mine === null ? '<p class="note">Not answered.</p>' : '') + '</div>';
+  }).join("");
+});
+</script>
+</body>
+</html>
